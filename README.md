@@ -9,22 +9,22 @@ Semestrálny projekt z predmetu **Vnorené riadiace systémy (VRS)**, FEI STU Br
 
 ## 1. Popis projektu
 
-Zariadenie stojí na mieste a automaticky naskenuje priestor pred sebou v rozsahu **180°**. Senzor vzdialenosti je upevnený na serve. Mikrokontrolér otáča servom po krokoch a v každej polohe zmeria vzdialenosť k najbližšej prekážke. Namerané dáta STM32 filtruje a prepočíta na súradnice **X/Y**. Výsledok posiela cez **UART** do PC, kde sa body zobrazia ako **2D mapa** okolia (napr. rohu miestnosti alebo kartónového bludiska).
+Zariadenie stojí na mieste a automaticky naskenuje priestor okolo seba v rozsahu **360°**. Cieľom je zmapovať miestnosť veľkosti laboratória, v ktorom prebiehajú cvičenia VRS. Na meranie vzdialenosti slúži laserový LiDAR senzor **TF-Luna** (dosah 0,2–8 m), upevnený na otočnej platforme s krokovým motorom. Po zapnutí zariadenie nájde nulovú polohu pomocou Hallovho snímača. Mikrokontrolér potom otáča platformou po krokoch a v každej polohe zmeria vzdialenosť k najbližšej prekážke. Namerané dáta STM32 filtruje a prepočíta na súradnice **X/Y**. Výsledok posiela cez **UART** do PC, kde sa body zobrazia ako **2D mapa** okolia. Zariadenie sa dá umiestniť kdekoľvek v miestnosti, napr. do stredu. Aby sa kábel senzora nezamotával, smer otáčania sa po každom skene strieda.
 
 Prepočet bodu (uhol θ, vzdialenosť d, senzor je v počiatku súradníc):
 
 ```
 x = d · cos(θ)
-y = d · sin(θ)        θ ∈ ⟨0°, 180°⟩
+y = d · sin(θ)        θ ∈ ⟨0°, 360°)
 ```
 
 ### Funkcie
 
-1. **Skenovanie 0°–180°** s nastaviteľným uhlovým krokom (1°–10°).
+1. **Skenovanie 0°–360°** s nastaviteľným uhlovým krokom (1°–10°), nájdenie nulovej polohy (homing) po zapnutí.
 2. **Meranie vzdialenosti** v každej polohe, nastaviteľný počet meraní na jeden bod (1–9).
 3. **Spracovanie dát priamo na STM32:**
    - odstránenie chybných meraní a filtrácia (medián z N meraní),
-   - kalibrácia (offset senzora, korekcia uhla serva),
+   - kalibrácia (offset senzora, korekcia uhla),
    - prepočet z polárnych súradníc (uhol, vzdialenosť) na karteziánske (X, Y).
 4. **Komunikácia s PC cez UART:** zariadenie prijíma príkazy a odosiela namerané body (tabuľka príkazov v časti 4).
 5. **Riadiaca logika:** stavový automat zariadenia (`IDLE`, `SCAN`, `SEND`, `ERROR`).
@@ -36,8 +36,9 @@ y = d · sin(θ)        θ ∈ ⟨0°, 180°⟩
 ```mermaid
 flowchart LR
     BTN[Tlačidlo]
-    SERVO[Servo SG90]
-    SENS[Senzor vzdialenosti]
+    MOTOR[Krokový motor]
+    HALL[Hallov snímač]
+    SENS[LiDAR TF-Luna]
     PC[PC<br/>zobrazenie mapy]
 
     subgraph STM[STM32 Nucleo-F303K8]
@@ -49,7 +50,8 @@ flowchart LR
     end
 
     BTN -- EXTI --> IRQ
-    IRQ -- PWM --> SERVO
+    HALL -- EXTI --> IRQ
+    IRQ -- kroky --> MOTOR
     DRV <--> SENS
     IRQ -- poloha pripravená --> PROC
     DRV -- vzdialenosť --> PROC
@@ -64,13 +66,15 @@ flowchart LR
 
 | Parameter | Cieľová hodnota |
 |-----------|-----------------|
-| Rozsah skenu | 0°–180° |
-| Uhlový krok | 1°–10°, predvolený 2° (91 bodov) |
-| Trvanie skenu s krokom 2° a 3 meraniami na bod | ≤ 15 s |
-| Merací rozsah | 5 cm – 150 cm |
-| Chyba vzdialenosti po kalibrácii | ≤ ±2 cm v rozsahu 10–100 cm |
-| Chyba uhla serva po kalibrácii | ≤ ±2° |
-| Rovná stena vo vzdialenosti 1 m | na mape priamka s odchýlkou bodov ≤ ±3 cm |
+| Rozsah skenu | 0°–360° |
+| Uhlový krok | 1°–10°, predvolený 2° (180 bodov) |
+| Trvanie skenu s krokom 2° a 3 meraniami na bod | ≤ 30 s |
+| Mapovaný priestor | miestnosť veľkosti laboratória VRS |
+| Merací rozsah | 0,2 m – 8 m |
+| Chyba vzdialenosti po kalibrácii | ≤ ±6 cm do 3 m, ≤ 2 % nad 3 m |
+| Chyba uhla po kalibrácii | ≤ ±2° |
+| Opakovateľnosť nulovej polohy (homing) | ≤ ±1° |
+| Rovná stena vo vzdialenosti 3 m | na mape priamka s odchýlkou bodov ≤ ±10 cm |
 | Reakcia na núdzové zastavenie tlačidlom | ≤ 20 ms |
 | Spoľahlivosť prenosu | 10 skenov za sebou bez strateného bodu |
 
@@ -81,13 +85,13 @@ flowchart LR
 | # | Komponent | Ks | Účel |
 |---|-----------|----|------|
 | 1 | STM32 Nucleo-F303K8 | 1 | riadiaca jednotka |
-| 2 | Senzor vzdialenosti: **upresníme** (laserový ToF VL53L0X/VL53L1X alebo ultrazvukový HC-SR04) | 1 | meranie vzdialenosti |
-| 3 | Servo SG90 (0°–180°) | 1 | otáčanie senzorom |
-| 4 | Tlačidlo | 1 | štart / núdzové zastavenie |
-| 5 | Externý zdroj 5 V / 1 A (pre servo) + kondenzátor 470 µF | 1 | napájanie serva, potlačenie prúdových špičiek |
-| 6 | Rezistory 1 kΩ + 2 kΩ (len pri HC-SR04) | 1 pár | delič napätia na Echo pin (5 V → 3,3 V) |
+| 2 | LiDAR senzor TF-Luna (0,2–8 m, UART / I2C) | 1 | meranie vzdialenosti |
+| 3 | Krokový motor 28BYJ-48 (5 V) + budič ULN2003 | 1 | otáčanie platformou so senzorom |
+| 4 | Hallov snímač A3144 + magnet | 1 | nulová poloha (homing) |
+| 5 | Tlačidlo | 1 | štart / núdzové zastavenie |
+| 6 | Externý zdroj 5 V / 1 A + kondenzátor 470 µF | 1 | napájanie motora a senzora, potlačenie prúdových špičiek |
 | 7 | Breadboard, prepojovacie vodiče | – | zapojenie |
-| 8 | Držiak senzora na servo, podstavec (3D tlač / kartón / preglejka) | 1 | konštrukcia |
+| 8 | Otočná platforma s držiakom senzora, podstavec (3D tlač / kartón / preglejka) | 1 | konštrukcia |
 | 9 | USB kábel (UART cez ST-LINK virtuálny COM port) | 1 | komunikácia s PC |
 
 ---
@@ -101,10 +105,10 @@ Textové správy ukončené znakom `\n`, aby sa dali čítať aj v obyčajnom s�
 | Príkaz | Parameter | Popis |
 |--------|-----------|-------|
 | `START` | – | spustí sken |
-| `STOP` | – | zastaví sken, servo ostane stáť |
+| `STOP` | – | zastaví sken, motor ostane stáť |
 | `STEP <n>` | 1–10 | uhlový krok v stupňoch |
 | `SAMPLES <n>` | 1–9 | počet meraní na jeden bod (medián) |
-| `GOTO <deg>` | 0–180 | natočí servo na uhol (ladenie, kalibrácia) |
+| `GOTO <deg>` | 0–359 | natočí platformu na uhol (ladenie, kalibrácia) |
 | `CAL <mm>` | -100–100 | offset vzdialenosti senzora |
 | `STATUS` | – | vráti aktuálny stav zariadenia |
 
@@ -123,21 +127,21 @@ Odpoveď na príkaz: `OK` alebo `ERR,<kód>`.
 
 ## 5. Rozdelenie úloh
 
-Každý člen programuje jeden modul firmvéru v C, vrátane jeho otestovania a dokumentácie.
+Firmvér bude implementovaný v jazyku C s využitím knižnice HAL.
 
 ### Dzvoňár: Pohon, časovanie a prerušenia
-- Návrh a realizácia riadenia polohy serva pomocou PWM signálu vrátane kalibrácie.
+- Riadenie krokového motora (generovanie krokov pomocou časovača a prerušení).
+- Nájdenie nulovej polohy (homing) pomocou Hallovho snímača a externého prerušenia.
 - Návrh časovej základne systému a neblokujúceho časovania pre ostatné moduly.
 - Riadenie priebehu skenovania pomocou prerušení.
 - Obsluha tlačidla pomocou externého prerušenia (štart, núdzové zastavenie).
 - Návrh a zdôvodnenie priorít prerušení v systéme.
 
-
 ### Nebus: Senzor vzdialenosti a mechanická konštrukcia
-- Ovládač zvoleného senzora vzdialenosti (inicializácia, meranie, kontrola stavu).
-- Ošetrenie chýb merania (timeout, hodnota mimo rozsahu).
+- Ovládač senzora TF-Luna (inicializácia, čítanie merania, kontrola sily signálu a stavu).
+- Ošetrenie chýb merania (timeout, hodnota mimo rozsahu, slabý odraz).
 - Overenie presnosti senzora na známych vzdialenostiach.
-- Mechanická konštrukcia (držiak senzora na servo, podstavec).
+- Mechanická konštrukcia (otočná platforma s držiakom senzora, podstavec).
 
 ### Ďurmek: Komunikácia a zobrazenie mapy
 - Komunikácia s PC cez UART s príjmom pomocou prerušení.
@@ -155,5 +159,4 @@ Každý člen programuje jeden modul firmvéru v C, vrátane jeho otestovania a 
 
 ## 6. Otvorené otázky
 
-- Ktorý senzor vzdialenosti použijeme (laserový ToF VL53L0X/VL53L1X alebo ultrazvukový HC-SR04)?
 - Môže byť zobrazenie mapy na PC v inom jazyku ako C (napr. Python), alebo stačí hotový nástroj na zobrazenie sériových dát?
