@@ -131,7 +131,7 @@ Každý člen programuje jeden modul firmvéru v C, vrátane jeho otestovania a 
 - Riadenie priebehu skenovania pomocou prerušení.
 - Obsluha tlačidla pomocou externého prerušenia (štart, núdzové zastavenie).
 - Návrh a zdôvodnenie priorít prerušení v systéme.
-- Dokumentácia projektu v README.
+
 
 ### Nebus: Senzor vzdialenosti a mechanická konštrukcia
 - Ovládač zvoleného senzora vzdialenosti (inicializácia, meranie, kontrola stavu).
@@ -157,4 +157,3 @@ Každý člen programuje jeden modul firmvéru v C, vrátane jeho otestovania a 
 
 - Ktorý senzor vzdialenosti použijeme (laserový ToF VL53L0X/VL53L1X alebo ultrazvukový HC-SR04)?
 - Môže byť zobrazenie mapy na PC v inom jazyku ako C (napr. Python), alebo stačí hotový nástroj na zobrazenie sériových dát?
-- Aké podrobná má byť dokumentácia v README? Je jej obsah a rozsah predpísaný, alebo ju môžeme spracovať podľa vlastného uváženia?
