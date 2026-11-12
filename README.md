@@ -123,49 +123,38 @@ Odpoveď na príkaz: `OK` alebo `ERR,<kód>`.
 
 ## 5. Rozdelenie úloh
 
-Každý člen programuje jeden modul firmvéru v C, vrátane jeho otestovania a dokumentácie. `main.c` je spoločný.
+Každý člen programuje jeden modul firmvéru v C, vrátane jeho otestovania a dokumentácie.
 
 ### Dzvoňár: Pohon, časovanie a prerušenia
-- Konfigurácia TIM2 na PWM 50 Hz pre servo, prepočet uhla na šírku impulzu, kalibrácia krajných polôh.
-- Systémový tick cez prerušenie TIM6 (1 ms), neblokujúce časovače pre ostatné moduly.
-- Riadenie skenu v prerušení: posun serva na ďalší uhol, odpočítanie času na ustálenie a nastavenie príznaku „poloha pripravená na meranie“.
-- Tlačidlo cez externé prerušenie (EXTI): štart skenu a núdzové zastavenie, ošetrenie zákmitov (debounce) pomocou ticku.
-- Konfigurácia NVIC: priority všetkých prerušení v systéme.
-- **Súbory:** `servo.c/h`, `tick.c/h`, `scan.c/h`, `button.c/h`, `irq_config.c/h`
+- Návrh a realizácia riadenia polohy serva pomocou PWM signálu vrátane kalibrácie.
+- Návrh časovej základne systému a neblokujúceho časovania pre ostatné moduly.
+- Riadenie priebehu skenovania pomocou prerušení.
+- Obsluha tlačidla pomocou externého prerušenia (štart, núdzové zastavenie).
+- Návrh a zdôvodnenie priorít prerušení v systéme.
+- Dokumentácia projektu v README.
 
-### Nebus: Driver senzora vzdialenosti
-- Ovládač zvoleného senzora:
-  - ToF: komunikácia cez I2C, inicializácia, spustenie a čítanie merania, kontrola statusu,
-  - ultrazvuk: generovanie trigger impulzu, meranie dĺžky echo impulzu časovačom (input capture).
-- Ošetrenie chýb (timeout, mimo rozsahu).
-- Overenie presnosti na známych vzdialenostiach (10, 25, 50, 75, 100, 150 cm), výsledky v `docs/`.
-- **Súbory:** `sensor.c/h` (spoločné API), `vl53l0x.c/h` alebo `hcsr04.c/h`
+### Nebus: Senzor vzdialenosti a mechanická konštrukcia
+- Ovládač zvoleného senzora vzdialenosti (inicializácia, meranie, kontrola stavu).
+- Ošetrenie chýb merania (timeout, hodnota mimo rozsahu).
+- Overenie presnosti senzora na známych vzdialenostiach.
+- Mechanická konštrukcia (držiak senzora na servo, podstavec).
 
-### Ďurmek: Komunikácia (UART)
-- Konfigurácia USART2, príjem cez prerušenie do kruhového buffera.
-- Parser príkazov a kontrolný súčet podľa protokolu v časti 4.
-- Odosielanie nameraných bodov a stavových správ do PC.
+### Ďurmek: Komunikácia a zobrazenie mapy
+- Komunikácia s PC cez UART s príjmom pomocou prerušení.
+- Spracovanie príkazov z PC a odosielanie nameraných dát podľa protokolu v časti 4.
 - Ošetrenie chybných a neúplných správ.
-- **Súbory:** `uart.c/h`, `ringbuf.c/h`, `protocol.c/h`
+- Zobrazenie mapy na PC z prijatých dát.
 
 ### Vozárik: Spracovanie dát a riadiaca logika
-- Filtrácia meraní (medián z N meraní, odstránenie odľahlých hodnôt).
+- Filtrácia meraní a odstránenie chybných hodnôt.
 - Kalibrácia (offset vzdialenosti, korekcia uhla).
-- Prepočet polárne → karteziánske súradnice (X, Y) a uloženie skenu do poľa.
-- Hlavný stavový automat, ktorý prepája moduly ostatných (`IDLE` → `SCAN` → `SEND` → `IDLE`, `ERROR`).
-- **Súbory:** `filter.c/h`, `calib.c/h`, `geometry.c/h`, `fsm.c/h`
-
-### Spoločné úlohy (celý tím)
-- Zapojenie HW, schéma zapojenia.
-- Mechanická konštrukcia (držiak senzora, podstavec).
-- Zobrazenie mapy na PC z dát z UART-u.
-- Integrácia modulov a testovanie celého zariadenia podľa cieľov v časti 2.
-- Dokumentácia v README.
+- Prepočet nameraných dát na súradnice X, Y a uloženie skenu.
+- Hlavný stavový automat, ktorý prepája moduly ostatných členov.
 
 ---
 
 ## 6. Otvorené otázky
 
 - Ktorý senzor vzdialenosti použijeme (laserový ToF VL53L0X/VL53L1X alebo ultrazvukový HC-SR04)?
-- Máme periférie programovať na úrovni registrov, alebo môžeme použiť HAL knižnicu?
 - Môže byť zobrazenie mapy na PC v inom jazyku ako C (napr. Python), alebo stačí hotový nástroj na zobrazenie sériových dát?
+- Aké podrobná má byť dokumentácia v README? Je jej obsah a rozsah predpísaný, alebo ju môžeme spracovať podľa vlastného uváženia?
