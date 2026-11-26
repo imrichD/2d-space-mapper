@@ -45,7 +45,7 @@ Na mapovanie väčších priestorov alebo viacerých prepojených miestností bu
 
 - Vytvorenie modulu na STM32, ktorý spája namerané vzdialenosti s príslušnými uhlami a zostavuje údaje jednotlivých skenov.
 - Príprava údajov skenov na odoslanie a ďalšie spracovanie.
-- Implementácia algoritmu Correlative Scan Matching na výpočet vzájomnej polohy a orientácie skenov.
+- Implementácia algoritmu na výpočet vzájomnej polohy a orientácie skenov.
 - Overenie správnosti spájania skenov z rôznych stanovísk.
 
 ### Nebus: Senzor vzdialenosti a hardvér
