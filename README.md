@@ -14,7 +14,7 @@ Cieľom projektu je vytvoriť **prenosné zariadenie na automatické 2D mapovani
 
 Zariadenie na zvolenom stanovisku vykoná **360° sken okolia**, pričom zaznamenáva namerané vzdialenosti a príslušné uhly. Z týchto údajov sa vytvorí 2D mapa okolia.
 
-Na mapovanie väčších priestorov alebo viacerých prepojených miestností bude možné zariadenie **ručne premiestňovať medzi stanoviskami**. Jednotlivé skeny sa následne spoja do spoločnej mapy pomocou algoritmu **Scan Matching** (predbežne Correlative Scan Matching), s možnosťou manuálneho zarovnania.
+Na mapovanie väčších priestorov alebo viacerých prepojených miestností bude možné zariadenie **ručne premiestňovať medzi stanoviskami**. Jednotlivé skeny sa následne spoja do spoločnej mapy (Correlative Scan Matching/manuálne/iným algoritmom).
 
 ### Hlavné funkcie
 
